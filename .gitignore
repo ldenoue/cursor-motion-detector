@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.venv/
+.DS_Store
+training/source/
+training/cursor_dataset/
+training/cursor_augmented/
+training/runs/
+runs/
+yolo26n.pt
+yolo-cursor-colab.zip
+/*.onnx
+/*.pt
+public/models/*.pt
+__pycache__/
+*.py[cod]

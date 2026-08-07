@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScreenRun Cursor Detector</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">ScreenRun experiment</p>
+          <h1>Cursor detector</h1>
+          <p class="lede">Compare static YOLO detectors with a temporal MobileNetV4 heatmap locally using WebGPU.</p>
+        </div>
+        <div id="modelStatus" class="status"><span></span> Loading model…</div>
+      </header>
+
+      <section class="controls">
+        <label class="model-picker">Detector
+          <select id="modelPicker">
+            <option value="yolov8n">YOLOv8n · published</option>
+            <option value="yolo26n">YOLO26n · macOS augmented</option>
+            <option value="temporal" selected>MobileNetV4 · temporal heatmap</option>
+          </select>
+        </label>
+        <label class="upload">
+          <input id="fileInput" type="file" accept="image/*,video/*" />
+          <strong>Choose an image or video</strong>
+          <small>PNG, JPEG, WebP, MP4 or WebM</small>
+        </label>
+        <label>Confidence <output id="confidenceValue">30%</output>
+          <input id="confidence" type="range" min="5" max="90" value="30" />
+        </label>
+        <button id="sampleButton" type="button">Try generated sample</button>
+      </section>
+
+      <section class="viewer" id="dropZone">
+        <canvas id="canvas" width="1280" height="720"></canvas>
+        <video id="video" muted playsinline hidden></video>
+        <div id="emptyState">Drop a screen recording or screenshot here</div>
+      </section>
+
+      <section id="videoControls" class="video-controls" hidden>
+        <button id="playPause" class="icon-button" type="button" aria-label="Play">▶</button>
+        <button id="stepBack" class="icon-button" type="button" aria-label="Previous frame">−1f</button>
+        <button id="stepForward" class="icon-button" type="button" aria-label="Next frame">+1f</button>
+        <span id="currentTime">00:00.000</span>
+        <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Video timeline" />
+        <span id="duration">00:00.000</span>
+        <label class="speed-label">Speed
+          <select id="playbackRate">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+      </section>
+
+      <footer>
+        <span id="result">Waiting for media</span>
+        <span id="fps"></span>
+        <span id="timing"></span>
+        <span id="backend"></span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+path: .
+train: training/source/backgrounds-train.parquet
+val: training/source/backgrounds-val.parquet
+test: training/source/backgrounds-test.parquet
+names:
+  0: cursor

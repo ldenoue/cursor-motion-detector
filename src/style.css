@@ -1,0 +1,35 @@
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #eef0e8; background: #11130e; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at 80% -20%, #354128 0, transparent 38%), #11130e; }
+main { width: min(1500px, calc(100% - 40px)); margin: auto; padding: 42px 0 24px; }
+header { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; margin-bottom: 30px; }
+.eyebrow { color: #d7ff45; font: 700 12px ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; margin: 0 0 10px; }
+h1 { font-size: clamp(38px, 6vw, 76px); line-height: .95; letter-spacing: -.055em; margin: 0; }
+.lede { color: #aeb3a7; max-width: 620px; font-size: 17px; }
+.status { background: #24271f; border: 1px solid #393d33; padding: 11px 14px; border-radius: 999px; color: #aeb3a7; white-space: nowrap; }
+.status span { display: inline-block; width: 8px; height: 8px; background: #f2c94c; border-radius: 50%; margin-right: 8px; }
+.status.ready span { background: #d7ff45; box-shadow: 0 0 12px #d7ff45; }
+.status.error { color: #ff8b78; }
+.controls { display: grid; grid-template-columns: auto minmax(260px, 1fr) minmax(240px, .7fr) auto; align-items: center; gap: 18px; padding: 14px; border: 1px solid #34382f; background: #1b1e18; border-radius: 18px 18px 0 0; }
+.model-picker { display: grid; gap: 6px; color: #8f9588; font-size: 12px; }
+.model-picker select { color: #eef0e8; background: #24271f; border: 1px solid #454a3e; border-radius: 8px; padding: 10px; font: inherit; }
+.upload { position: relative; display: flex; flex-direction: column; border: 1px dashed #626858; padding: 12px 16px; border-radius: 10px; cursor: pointer; }
+.upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload small { color: #8f9588; }
+.controls > label:not(.upload) { display: grid; grid-template-columns: 1fr auto; gap: 7px; color: #b8bdb1; font-size: 13px; }
+.controls input[type=range] { grid-column: 1 / -1; accent-color: #d7ff45; }
+button { border: 1px solid #d7ff45; color: #d7ff45; background: transparent; border-radius: 9px; padding: 13px 16px; font: inherit; cursor: pointer; }
+button:hover { color: #11130e; background: #d7ff45; }
+.viewer { position: relative; min-height: 360px; height: min(70vh, 900px); display: grid; place-items: center; background-color: #090a08; background-image: linear-gradient(45deg,#151713 25%,transparent 25%),linear-gradient(-45deg,#151713 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#151713 75%),linear-gradient(-45deg,transparent 75%,#151713 75%); background-size: 24px 24px; background-position: 0 0,0 12px,12px -12px,-12px 0; border-inline: 1px solid #34382f; overflow: hidden; }
+.viewer.dragging { outline: 3px solid #d7ff45; outline-offset: -3px; }
+canvas { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+#emptyState { position: absolute; color: #777d70; pointer-events: none; }
+.video-controls { display: grid; grid-template-columns: auto auto auto auto minmax(120px, 1fr) auto auto; align-items: center; gap: 12px; padding: 12px 14px; color: #b8bdb1; background: #161913; border: 1px solid #34382f; border-bottom: 0; font: 12px ui-monospace, monospace; }
+.video-controls[hidden] { display: none; }
+.video-controls input[type=range] { width: 100%; accent-color: #d7ff45; }
+.icon-button { min-width: 42px; padding: 8px 10px; font: 12px ui-monospace, monospace; }
+.speed-label { display: flex; align-items: center; gap: 7px; }
+.speed-label select { color: #eef0e8; background: #24271f; border: 1px solid #454a3e; border-radius: 6px; padding: 6px; }
+footer { display: flex; gap: 28px; padding: 14px 18px; min-height: 50px; color: #969c90; background: #1b1e18; border: 1px solid #34382f; border-radius: 0 0 18px 18px; font: 13px ui-monospace, monospace; }
+#result { color: #e8eadf; margin-right: auto; }
+@media (max-width: 760px) { main { width: calc(100% - 20px); padding-top: 24px; } header { flex-direction: column; } .controls { grid-template-columns: 1fr; } .viewer { height: 55vh; } .video-controls { grid-template-columns: auto auto auto 1fr; } .video-controls #timeline { grid-column: 1 / -1; grid-row: 2; } .video-controls #currentTime, .video-controls #duration { display: none; } footer { gap: 14px; flex-wrap: wrap; } }
