@@ -3,6 +3,8 @@
 Detect mouse cursor hotspots in screen recordings with temporal motion cues,
 MobileNetV4, ONNX Runtime Web, and WebGPU.
 
+**[Read the article and try the live demo](https://ldenoue.github.io/cursor-motion-detector/)**
+
 The repository includes an interactive browser test bench, two static YOLO
 baselines, a temporal hotspot model, runtime synthetic-data generators, training
 scripts, and Colab notebooks.

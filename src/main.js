@@ -3,10 +3,11 @@ import ortBootstrapUrl from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs
 import ortWasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url";
 import "./style.css";
 
+const BASE = import.meta.env.BASE_URL;
 const MODELS = {
-  yolov8n: { name: "YOLOv8n", url: "/models/cursor-yolov8n.onnx" },
-  yolo26n: { name: "YOLO26n · macOS augmented", url: "/models/cursor-yolo26n.onnx" },
-  temporal: { name: "MobileNetV4 · temporal heatmap", url: "/models/mobilenetv4-temporal.onnx", temporal: true }
+  yolov8n: { name: "YOLOv8n", url: `${BASE}models/cursor-yolov8n.onnx` },
+  yolo26n: { name: "YOLO26n · macOS augmented", url: `${BASE}models/cursor-yolo26n.onnx` },
+  temporal: { name: "MobileNetV4 · temporal heatmap", url: `${BASE}models/mobilenetv4-temporal.onnx`, temporal: true }
 };
 const SIZE = 640;
 const canvas = document.querySelector("#canvas");
