@@ -350,10 +350,23 @@ function openFile(file) {
   if (file.type.startsWith("video/")) {
     currentImage = null;
     videoControls.hidden = false;
+    video.muted = true;
+    video.autoplay = true;
     video.src = objectUrl;
-    video.onloadeddata = () => {
+    video.onloadeddata = async () => {
+      // Show the first decoded frame immediately, without waiting for inference.
+      lastBoxes = [];
+      draw(video, lastBoxes);
       updateTransport();
-      detect(video);
+      try {
+        await video.play();
+        if (!videoFrameRequest) videoLoop();
+      } catch {
+        // Muted autoplay is normally allowed, but leave the video ready for the
+        // manual play button if a browser policy still blocks it.
+        await detect(video);
+        updateTransport();
+      }
     };
   } else {
     videoControls.hidden = true;
