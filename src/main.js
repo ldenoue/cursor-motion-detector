@@ -32,6 +32,7 @@ const backendLabel = document.querySelector("#backend");
 const statusLabel = document.querySelector("#modelStatus");
 const confidence = document.querySelector("#confidence");
 const confidenceValue = document.querySelector("#confidenceValue");
+const traceToggle = document.querySelector("#traceToggle");
 const demoVideoButton = document.querySelector("#demoVideoButton");
 
 let session;
@@ -48,7 +49,9 @@ let smoothedInferenceMs;
 let pendingDetectionSource;
 let skimTimer;
 let temporalHistory = [];
+let tracePoints = [];
 const FRAME_SECONDS = 1 / 30;
+const TRACE_GAP_SECONDS = 0.3;
 
 // ORT's WebGPU backend still uses a WASM bootstrap. Vite emits both assets
 // locally; the explicit overrides avoid any runtime CDN dependency.
@@ -240,6 +243,7 @@ function draw(source, boxes) {
     canvas.height = height;
   }
   ctx.drawImage(source, 0, 0, width, height);
+  if (source === video && traceToggle.checked) drawTrace(video.currentTime, width);
   const line = Math.max(2, width / 600);
   ctx.font = `${Math.max(14, width / 65)}px ui-monospace, monospace`;
   ctx.lineWidth = line;
@@ -263,6 +267,62 @@ function draw(source, boxes) {
   }
 }
 
+function tracePointFor(box) {
+  return box.point
+    ? { x: box.x, y: box.y }
+    : { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+}
+
+function recordTrace(boxes, time) {
+  if (!Number.isFinite(time) || !boxes.length) return;
+  const best = boxes.reduce((a, b) => a.score >= b.score ? a : b);
+  const point = { ...tracePointFor(best), time };
+  const nearby = tracePoints.findIndex(item => Math.abs(item.time - time) < FRAME_SECONDS / 2);
+  if (nearby >= 0) tracePoints[nearby] = point;
+  else tracePoints.push(point);
+  tracePoints.sort((a, b) => a.time - b.time);
+}
+
+function strokeSmooth(points) {
+  if (!points.length) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i++) {
+    const next = points[i + 1];
+    ctx.quadraticCurveTo(points[i].x, points[i].y, (points[i].x + next.x) / 2, (points[i].y + next.y) / 2);
+  }
+  if (points.length > 1) ctx.lineTo(points.at(-1).x, points.at(-1).y);
+  ctx.stroke();
+}
+
+function drawTrace(currentTime, width) {
+  const visible = tracePoints.filter(point => point.time <= currentTime + FRAME_SECONDS / 2);
+  if (!visible.length) return;
+  const segments = [];
+  let segment = [];
+  for (const point of visible) {
+    if (segment.length && point.time - segment.at(-1).time > TRACE_GAP_SECONDS) {
+      segments.push(segment);
+      segment = [];
+    }
+    segment.push(point);
+  }
+  if (segment.length) segments.push(segment);
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const points of segments) {
+    ctx.strokeStyle = "rgba(255,255,255,.78)";
+    ctx.lineWidth = Math.max(5, width / 150);
+    strokeSmooth(points);
+    ctx.strokeStyle = "rgba(10,132,255,.9)";
+    ctx.lineWidth = Math.max(2.5, width / 300);
+    strokeSmooth(points);
+  }
+  ctx.restore();
+}
+
 async function detect(source) {
   if (!session) return;
   if (busy) {
@@ -271,6 +331,7 @@ async function detect(source) {
   }
   busy = true;
   const started = performance.now();
+  const sourceTime = source === video ? video.currentTime : undefined;
   try {
     const temporal = MODELS[activeModelId]?.temporal;
     const meta = temporal ? preprocessTemporal(source) : preprocess(source);
@@ -278,6 +339,7 @@ async function detect(source) {
     lastBoxes = temporal
       ? decodeTemporal(outputs, meta, Number(confidence.value) / 100)
       : decode(outputs[session.outputNames[0]], meta, Number(confidence.value) / 100);
+    recordTrace(lastBoxes, sourceTime);
     draw(source, lastBoxes);
     const elapsed = performance.now() - started;
     smoothedInferenceMs = smoothedInferenceMs == null ? elapsed : smoothedInferenceMs * 0.8 + elapsed * 0.2;
@@ -345,6 +407,7 @@ function openFile(file) {
   objectUrl = URL.createObjectURL(file);
   smoothedInferenceMs = undefined;
   temporalHistory = [];
+  tracePoints = [];
   fpsLabel.textContent = "";
   emptyState.hidden = true;
   if (file.type.startsWith("video/")) {
@@ -381,7 +444,17 @@ confidence.addEventListener("input", () => {
   confidenceValue.textContent = `${confidence.value}%`;
   if (currentImage) detect(currentImage);
 });
-modelPicker.addEventListener("change", () => loadModel(modelPicker.value));
+confidence.addEventListener("change", () => {
+  tracePoints = [];
+  if (video.src && !currentImage) detect(video);
+});
+traceToggle.addEventListener("change", () => {
+  if (video.src && !currentImage) draw(video, lastBoxes);
+});
+modelPicker.addEventListener("change", () => {
+  tracePoints = [];
+  loadModel(modelPicker.value);
+});
 ["dragenter", "dragover"].forEach(type => dropZone.addEventListener(type, event => {
   event.preventDefault(); dropZone.classList.add("dragging");
 }));
@@ -399,6 +472,7 @@ dropZone.addEventListener("keydown", event => {
 
 document.querySelector("#sampleButton").addEventListener("click", () => {
   stopVideo();
+  tracePoints = [];
   videoControls.hidden = true;
   const sample = new OffscreenCanvas(1280, 720);
   const c = sample.getContext("2d");
