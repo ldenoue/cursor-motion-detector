@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "marked": "^16.4.2",
-    "mermaid": "^11.16.1",
     "onnxruntime-web": "^1.22.0"
   },
   "devDependencies": {

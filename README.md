@@ -5,6 +5,10 @@ MobileNetV4, ONNX Runtime Web, and WebGPU.
 
 **[Read the article and try the live demo](https://ldenoue.github.io/cursor-motion-detector/)**
 
+[![Cursor hotspot detection running in the browser](public/cursor-motion-detector-preview.jpg)](https://ldenoue.github.io/cursor-motion-detector/cursor-motion-detector.mp4)
+
+*[Watch the 33-second result video](https://ldenoue.github.io/cursor-motion-detector/cursor-motion-detector.mp4).*
+
 The repository includes an interactive browser test bench, two static YOLO
 baselines, a temporal hotspot model, runtime synthetic-data generators, training
 scripts, and Colab notebooks.
