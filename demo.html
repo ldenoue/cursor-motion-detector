@@ -36,7 +36,10 @@
         <label>Confidence <output id="confidenceValue">30%</output>
           <input id="confidence" type="range" min="5" max="90" value="30" />
         </label>
-        <button id="sampleButton" type="button">Try generated sample</button>
+        <div class="sample-actions">
+          <button id="sampleButton" type="button">Try sample image</button>
+          <button id="demoVideoButton" type="button">Try sample video</button>
+        </div>
       </section>
       <section class="viewer" id="dropZone">
         <canvas id="canvas" width="1280" height="720"></canvas>

@@ -14,6 +14,8 @@ h1 { font-size: clamp(38px, 6vw, 76px); line-height: .95; letter-spacing: -.055e
 .status.ready span { background: #d7ff45; box-shadow: 0 0 12px #d7ff45; }
 .status.error { color: #ff8b78; }
 .controls { display: grid; grid-template-columns: auto minmax(260px, 1fr) minmax(240px, .7fr) auto; align-items: center; gap: 18px; padding: 14px; border: 1px solid #34382f; background: #1b1e18; border-radius: 18px 18px 0 0; }
+.sample-actions { display: flex; gap: 8px; }
+.sample-actions button { padding-inline: 12px; white-space: nowrap; }
 .model-picker { display: grid; gap: 6px; color: #8f9588; font-size: 12px; }
 .model-picker select { color: #eef0e8; background: #24271f; border: 1px solid #454a3e; border-radius: 8px; padding: 10px; font: inherit; }
 .upload { position: relative; display: flex; flex-direction: column; border: 1px dashed #626858; padding: 12px 16px; border-radius: 10px; cursor: pointer; }
@@ -35,4 +37,4 @@ canvas { display: block; max-width: 100%; max-height: 100%; object-fit: contain;
 .speed-label select { color: #eef0e8; background: #24271f; border: 1px solid #454a3e; border-radius: 6px; padding: 6px; }
 footer { display: flex; gap: 28px; padding: 14px 18px; min-height: 50px; color: #969c90; background: #1b1e18; border: 1px solid #34382f; border-radius: 0 0 18px 18px; font: 13px ui-monospace, monospace; }
 #result { color: #e8eadf; margin-right: auto; }
-@media (max-width: 760px) { main { width: calc(100% - 20px); padding-top: 24px; } header { flex-direction: column; } .controls { grid-template-columns: 1fr; } .viewer { height: 55vh; } .video-controls { grid-template-columns: auto auto auto 1fr; } .video-controls #timeline { grid-column: 1 / -1; grid-row: 2; } .video-controls #currentTime, .video-controls #duration { display: none; } footer { gap: 14px; flex-wrap: wrap; } }
+@media (max-width: 760px) { main { width: calc(100% - 20px); padding-top: 24px; } header { flex-direction: column; } .controls { grid-template-columns: 1fr; } .sample-actions { flex-wrap: wrap; } .viewer { height: 55vh; } .video-controls { grid-template-columns: auto auto auto 1fr; } .video-controls #timeline { grid-column: 1 / -1; grid-row: 2; } .video-controls #currentTime, .video-controls #duration { display: none; } footer { gap: 14px; flex-wrap: wrap; } }

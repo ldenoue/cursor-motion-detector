@@ -32,6 +32,7 @@ const backendLabel = document.querySelector("#backend");
 const statusLabel = document.querySelector("#modelStatus");
 const confidence = document.querySelector("#confidence");
 const confidenceValue = document.querySelector("#confidenceValue");
+const demoVideoButton = document.querySelector("#demoVideoButton");
 
 let session;
 let activeModelId;
@@ -391,6 +392,21 @@ document.querySelector("#sampleButton").addEventListener("click", () => {
   c.lineTo(832, 514); c.lineTo(819, 488); c.lineTo(838, 487); c.closePath();
   c.lineWidth = 6; c.strokeStyle = "white"; c.stroke(); c.fillStyle = "black"; c.fill();
   currentImage = sample; emptyState.hidden = true; detect(sample);
+});
+
+demoVideoButton.addEventListener("click", async () => {
+  demoVideoButton.disabled = true;
+  resultLabel.textContent = "Loading sample video…";
+  try {
+    const response = await fetch(`${BASE}video-for-demo.mp4`);
+    if (!response.ok) throw new Error(`Could not load sample video (${response.status})`);
+    const blob = await response.blob();
+    openFile(new File([blob], "video-for-demo.mp4", { type: "video/mp4" }));
+  } catch (error) {
+    resultLabel.textContent = error.message;
+  } finally {
+    demoVideoButton.disabled = false;
+  }
 });
 
 playPause.addEventListener("click", async () => {
