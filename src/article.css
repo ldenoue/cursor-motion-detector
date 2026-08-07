@@ -11,11 +11,6 @@ a { color: inherit; }
 .site-header nav a { color: #52594e; font-size: 14px; font-weight: 600; text-decoration: none; }
 .site-header nav a:hover { color: #171a16; }
 .article-shell { overflow: hidden; }
-.license-shell { overflow: hidden; }
-.license-intro { padding: 100px max(24px, calc((100vw - 760px) / 2)) 84px; color: #f5f4ed; background: #172019; }
-.license-intro h1 { max-width: 760px; margin: 0; font: 600 clamp(52px, 8vw, 92px)/.94 Newsreader, Georgia, serif; letter-spacing: -.045em; }
-.license-intro p:not(.kicker) { max-width: 680px; margin: 30px 0 0; color: #bdc5ba; font-size: 19px; line-height: 1.6; }
-.license-intro a { color: #d7ff45; }
 .hero { position: relative; min-height: 720px; padding: 110px max(24px, calc((100vw - 1160px) / 2)) 86px; color: #f5f4ed; background: #172019; }
 .hero::before { content: ""; position: absolute; width: 620px; height: 620px; right: -150px; top: -150px; border: 1px solid rgba(215,255,69,.35); border-radius: 50%; box-shadow: 0 0 0 80px rgba(215,255,69,.035), 0 0 0 160px rgba(215,255,69,.025); }
 .hero::after { content: "x, y"; position: absolute; right: max(24px, calc((100vw - 1120px) / 2)); top: 290px; display: grid; place-items: center; width: 94px; height: 94px; border: 1px solid #d7ff45; border-radius: 50%; color: #d7ff45; font: 500 14px "DM Mono", monospace; }

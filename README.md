@@ -5,11 +5,6 @@ MobileNetV4, ONNX Runtime Web, and WebGPU.
 
 **[Read the article and try the live demo](https://ldenoue.github.io/cursor-motion-detector/)**
 
-> **Noncommercial use only.** Personal experiments, research, education, and
-> other noncommercial uses are permitted under the
-> [PolyForm Noncommercial License 1.0.0](LICENSE.md). For commercial licensing,
-> contact [ldenoue@gmail.com](mailto:ldenoue@gmail.com).
-
 [![Cursor hotspot detection running in the browser](public/cursor-motion-detector-preview.jpg)](https://ldenoue.github.io/cursor-motion-detector/cursor-motion-detector.mp4)
 
 *[Watch the 33-second result video](https://ldenoue.github.io/cursor-motion-detector/cursor-motion-detector.mp4).*
@@ -151,11 +146,6 @@ training/*_colab.ipynb             Colab training notebooks
 ```
 
 ## Licensing note
-
-The original code and trained MobileNetV4 model in this repository are provided
-under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). This is a
-source-available license, not an open-source license. Commercial use requires a
-separate agreement from the copyright holder.
 
 The included YOLO checkpoints originate from or were exported with Ultralytics
 and may be subject to AGPL-3.0 terms. Review model, dataset, and dependency
