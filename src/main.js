@@ -389,6 +389,13 @@ modelPicker.addEventListener("change", () => loadModel(modelPicker.value));
   event.preventDefault(); dropZone.classList.remove("dragging");
 }));
 dropZone.addEventListener("drop", event => openFile(event.dataTransfer.files[0]));
+dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    fileInput.click();
+  }
+});
 
 document.querySelector("#sampleButton").addEventListener("click", () => {
   stopVideo();

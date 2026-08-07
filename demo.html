@@ -11,7 +11,7 @@
     <main>
       <nav class="demo-nav">
         <a href="./">Read the article</a>
-        <a href="https://github.com/ldenoue/cursor-motion-detector">View on GitHub</a>
+        <a class="github-link" href="https://github.com/ldenoue/cursor-motion-detector" aria-label="View Cursor Motion Detector on GitHub" title="View on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.24.7-3.92-1.38-3.92-1.38-.53-1.35-1.29-1.71-1.29-1.71-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.75.41-1.27.74-1.56-2.58-.29-5.3-1.29-5.3-5.69 0-1.26.45-2.29 1.2-3.1-.12-.3-.52-1.48.12-3.07 0 0 .98-.31 3.16 1.18a10.98 10.98 0 0 1 5.76 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.77.11 3.07.75.81 1.2 1.84 1.2 3.1 0 4.41-2.72 5.39-5.31 5.68.42.36.79 1.07.79 2.16v3.27c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg></a>
       </nav>
       <header>
         <div>
@@ -24,15 +24,10 @@
       <section class="controls">
         <label class="model-picker">Detector
           <select id="modelPicker">
-            <option value="yolov8n">YOLOv8n · published</option>
-            <option value="yolo26n">YOLO26n · macOS augmented</option>
-            <option value="temporal" selected>MobileNetV4 · temporal heatmap</option>
+            <option value="yolov8n">YOLOv8n</option>
+            <option value="yolo26n">YOLO26n</option>
+            <option value="temporal" selected>MobileNetV4</option>
           </select>
-        </label>
-        <label class="upload">
-          <input id="fileInput" type="file" accept="image/*,video/*" />
-          <strong>Choose an image or video</strong>
-          <small>PNG, JPEG, WebP, MP4 or WebM</small>
         </label>
         <label>Confidence <output id="confidenceValue">30%</output>
           <input id="confidence" type="range" min="5" max="90" value="30" />
@@ -42,10 +37,11 @@
           <button id="demoVideoButton" type="button">Try sample video</button>
         </div>
       </section>
-      <section class="viewer" id="dropZone">
+      <input id="fileInput" class="media-input" type="file" accept="image/*,video/*" />
+      <section class="viewer" id="dropZone" role="button" tabindex="0" aria-label="Choose or drop an image or video">
         <canvas id="canvas" width="1280" height="720"></canvas>
         <video id="video" muted playsinline hidden></video>
-        <div id="emptyState">Drop a screen recording or screenshot here</div>
+        <div id="emptyState">Drop a screen recording or screenshot here, or click to choose one</div>
       </section>
       <section id="videoControls" class="video-controls" hidden>
         <button id="playPause" class="icon-button" type="button" aria-label="Play">▶</button>
