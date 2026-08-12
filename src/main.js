@@ -34,6 +34,7 @@ const confidence = document.querySelector("#confidence");
 const confidenceValue = document.querySelector("#confidenceValue");
 const traceToggle = document.querySelector("#traceToggle");
 const demoVideoButton = document.querySelector("#demoVideoButton");
+const shareScreenButton = document.querySelector("#shareScreenButton");
 
 let session;
 let activeModelId;
@@ -50,6 +51,8 @@ let pendingDetectionSource;
 let skimTimer;
 let temporalHistory = [];
 let tracePoints = [];
+let displayStream;
+let isLiveScreen = false;
 const FRAME_SECONDS = 1 / 30;
 const TRACE_GAP_SECONDS = 0.3;
 
@@ -82,7 +85,7 @@ async function loadModelNow(modelId, loadId) {
     backendLabel.textContent = navigator.gpu ? "WebGPU" : "WASM fallback";
     smoothedInferenceMs = undefined;
     fpsLabel.textContent = "";
-    const source = currentImage || (video.src ? video : null);
+    const source = currentImage || (hasVideoSource() ? video : null);
     if (source) detect(source);
   } catch (error) {
     statusLabel.classList.add("error");
@@ -364,6 +367,24 @@ function stopVideo() {
   }
 }
 
+function hasVideoSource() {
+  return Boolean(video.src || video.srcObject);
+}
+
+function stopScreenShare({ updateResult = true } = {}) {
+  if (!displayStream) return;
+  const stream = displayStream;
+  displayStream = undefined;
+  isLiveScreen = false;
+  stream.getTracks().forEach(track => track.stop());
+  stopVideo();
+  video.srcObject = null;
+  shareScreenButton.textContent = "Share screen";
+  shareScreenButton.classList.remove("sharing");
+  shareScreenButton.setAttribute("aria-pressed", "false");
+  if (updateResult) resultLabel.textContent = "Screen sharing stopped";
+}
+
 function videoLoop() {
   detect(video);
   updateTransport();
@@ -379,6 +400,7 @@ function formatTime(seconds) {
 }
 
 function updateTransport() {
+  if (isLiveScreen) return;
   const duration = video.duration || 0;
   timeline.value = duration ? Math.round(video.currentTime / duration * 1000) : 0;
   currentTimeLabel.textContent = formatTime(video.currentTime);
@@ -402,6 +424,7 @@ async function seekTo(time) {
 
 function openFile(file) {
   if (!file) return;
+  stopScreenShare({ updateResult: false });
   stopVideo();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
@@ -446,10 +469,10 @@ confidence.addEventListener("input", () => {
 });
 confidence.addEventListener("change", () => {
   tracePoints = [];
-  if (video.src && !currentImage) detect(video);
+  if (hasVideoSource() && !currentImage) detect(video);
 });
 traceToggle.addEventListener("change", () => {
-  if (video.src && !currentImage) draw(video, lastBoxes);
+  if (hasVideoSource() && !currentImage) draw(video, lastBoxes);
 });
 modelPicker.addEventListener("change", () => {
   tracePoints = [];
@@ -462,15 +485,18 @@ modelPicker.addEventListener("change", () => {
   event.preventDefault(); dropZone.classList.remove("dragging");
 }));
 dropZone.addEventListener("drop", event => openFile(event.dataTransfer.files[0]));
-dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("click", () => {
+  if (!isLiveScreen) fileInput.click();
+});
 dropZone.addEventListener("keydown", event => {
-  if (event.key === "Enter" || event.key === " ") {
+  if (!isLiveScreen && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
     fileInput.click();
   }
 });
 
 document.querySelector("#sampleButton").addEventListener("click", () => {
+  stopScreenShare({ updateResult: false });
   stopVideo();
   tracePoints = [];
   videoControls.hidden = true;
@@ -486,6 +512,55 @@ document.querySelector("#sampleButton").addEventListener("click", () => {
   c.lineTo(832, 514); c.lineTo(819, 488); c.lineTo(838, 487); c.closePath();
   c.lineWidth = 6; c.strokeStyle = "white"; c.stroke(); c.fillStyle = "black"; c.fill();
   currentImage = sample; emptyState.hidden = true; detect(sample);
+});
+
+shareScreenButton.addEventListener("click", async () => {
+  if (displayStream) {
+    stopScreenShare();
+    return;
+  }
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    resultLabel.textContent = "Screen sharing is not supported in this browser";
+    return;
+  }
+
+  shareScreenButton.disabled = true;
+  resultLabel.textContent = "Choose a screen, window, or tab to share…";
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal: 30, max: 60 } },
+      audio: false
+    });
+    stopVideo();
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = undefined;
+    }
+    video.removeAttribute("src");
+    video.load();
+    displayStream = stream;
+    isLiveScreen = true;
+    currentImage = null;
+    temporalHistory = [];
+    tracePoints = [];
+    lastBoxes = [];
+    smoothedInferenceMs = undefined;
+    videoControls.hidden = true;
+    emptyState.hidden = true;
+    video.srcObject = stream;
+    shareScreenButton.textContent = "Stop sharing";
+    shareScreenButton.classList.add("sharing");
+    shareScreenButton.setAttribute("aria-pressed", "true");
+    stream.getVideoTracks()[0].addEventListener("ended", () => stopScreenShare(), { once: true });
+    await video.play();
+    resultLabel.textContent = "Detecting cursors on your shared screen";
+    videoLoop();
+  } catch (error) {
+    if (error.name !== "NotAllowedError") resultLabel.textContent = `Could not share screen: ${error.message}`;
+    else resultLabel.textContent = "Screen sharing cancelled";
+  } finally {
+    shareScreenButton.disabled = false;
+  }
 });
 
 demoVideoButton.addEventListener("click", async () => {

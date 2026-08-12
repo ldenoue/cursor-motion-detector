@@ -18,6 +18,10 @@ h1 { margin: 0; font-size: clamp(44px, 6vw, 76px); font-weight: 700; line-height
 .controls { display: grid; grid-template-columns: minmax(140px, auto) minmax(240px, 1fr) auto auto; align-items: center; gap: 16px; padding: 16px; border: 1px solid #d2d2d7; background: rgba(255,255,255,.9); border-radius: 20px 20px 0 0; box-shadow: 0 8px 28px rgba(0,0,0,.06); }
 .sample-actions { display: flex; gap: 8px; }
 .sample-actions button { padding-inline: 14px; white-space: nowrap; }
+.sample-actions .share-button { background: #1d1d1f; }
+.sample-actions .share-button:hover { background: #424245; }
+.sample-actions .share-button.sharing { background: #ff3b30; }
+.sample-actions .share-button.sharing:hover { background: #d70015; }
 .model-picker { display: grid; min-width: 0; gap: 6px; color: #6e6e73; font-size: 12px; }
 .model-picker select, .speed-label select { min-width: 0; width: 100%; color: #1d1d1f; background: #fff; border: 1px solid #d2d2d7; border-radius: 10px; padding: 10px; font: inherit; }
 .controls > label:not(.upload) { display: grid; grid-template-columns: 1fr auto; gap: 7px; color: #6e6e73; font-size: 13px; }
@@ -50,7 +54,7 @@ footer { display: flex; gap: 28px; min-height: 52px; padding: 15px 18px; color: 
 #result { color: #1d1d1f; margin-right: auto; }
 @media (max-width: 1180px) {
   .controls { grid-template-columns: minmax(180px, .7fr) minmax(240px, 1fr); }
-  .sample-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+  .sample-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 760px) {
   main { width: calc(100% - 20px); padding-top: 20px; }
@@ -80,6 +84,9 @@ footer { display: flex; gap: 28px; min-height: 52px; padding: 15px 18px; color: 
   .controls input[type=range], .video-controls input[type=range] { accent-color: #0a84ff; }
   button { background: #0a84ff; }
   button:hover { background: #2997ff; }
+  .sample-actions .share-button { color: #1d1d1f; background: #f5f5f7; }
+  .sample-actions .share-button:hover { background: #d2d2d7; }
+  .sample-actions .share-button.sharing { color: #fff; background: #ff453a; }
   .viewer { border-inline-color: #424245; }
   .viewer.dragging { outline-color: #0a84ff; }
   .video-controls { color: #a1a1a6; border-color: #424245; background: #1c1c1e; }
