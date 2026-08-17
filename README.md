@@ -45,6 +45,13 @@ Open the displayed local URL and drop in an image or screen recording. Video
 transport controls support playback, frame stepping, and inference while
 skimming. Processing stays local in the browser.
 
+The **Inpaint real cursor** toggle keeps a full-resolution background cache, updates
+it everywhere except the detected cursor region, and fills that region from
+previously observed clean pixels. A separate validity mask leaves the cursor
+visible until its background has genuinely been seen, avoiding invented or
+uninitialized pixels. The cache uses a fixed number of canvases rather than a
+history of complete video frames.
+
 The model picker compares:
 
 | Model | Input | Output |

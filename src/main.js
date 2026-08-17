@@ -33,6 +33,7 @@ const statusLabel = document.querySelector("#modelStatus");
 const confidence = document.querySelector("#confidence");
 const confidenceValue = document.querySelector("#confidenceValue");
 const traceToggle = document.querySelector("#traceToggle");
+const inpaintToggle = document.querySelector("#inpaintToggle");
 const demoVideoButton = document.querySelector("#demoVideoButton");
 const shareScreenButton = document.querySelector("#shareScreenButton");
 
@@ -53,6 +54,16 @@ let temporalHistory = [];
 let tracePoints = [];
 let displayStream;
 let isLiveScreen = false;
+let backgroundCanvas;
+let validBackgroundCanvas;
+let repairCanvas;
+let inpaintMaskCanvas;
+let lastInpaintTime;
+let fakeCursorFilters = [];
+let inferenceFrameCanvas;
+let previousFrameCanvas;
+let previousCursorRegions = [];
+let comparisonCanvas;
 const FRAME_SECONDS = 1 / 30;
 const TRACE_GAP_SECONDS = 0.3;
 
@@ -238,15 +249,242 @@ function iou(a, b) {
   return intersection / (a.w * a.h + b.w * b.h - intersection);
 }
 
-function draw(source, boxes) {
+function resetInpainting() {
+  backgroundCanvas = undefined;
+  validBackgroundCanvas = undefined;
+  repairCanvas = undefined;
+  inpaintMaskCanvas = undefined;
+  lastInpaintTime = undefined;
+  fakeCursorFilters = [];
+  previousFrameCanvas = undefined;
+  previousCursorRegions = [];
+  comparisonCanvas = undefined;
+}
+
+function snapshotVideoFrame(source) {
+  const width = source.videoWidth;
+  const height = source.videoHeight;
+  if (!inferenceFrameCanvas || inferenceFrameCanvas.width !== width || inferenceFrameCanvas.height !== height) {
+    inferenceFrameCanvas = new OffscreenCanvas(width, height);
+  }
+  inferenceFrameCanvas.getContext("2d").drawImage(source, 0, 0, width, height);
+  return inferenceFrameCanvas;
+}
+
+function smoothingAlpha(cutoff, dt) {
+  const tau = 1 / (2 * Math.PI * cutoff);
+  return 1 / (1 + tau / dt);
+}
+
+function lowPass(value, previous, alpha) {
+  return alpha * value + (1 - alpha) * previous;
+}
+
+function smoothFakeCursor(point, index, time, update) {
+  const previous = fakeCursorFilters[index];
+  if (!update && previous) return { x: previous.x, y: previous.y };
+  const dt = previous ? time - previous.time : 0;
+  if (!previous || dt <= 0 || dt > 0.25) {
+    fakeCursorFilters[index] = { ...point, rawX: point.x, rawY: point.y, dx: 0, dy: 0, time };
+    return point;
+  }
+
+  // One Euro filter: stable while nearly stationary, but raises its cutoff as
+  // the cursor accelerates so the marker stays close to the actual hotspot.
+  const derivativeAlpha = smoothingAlpha(1, dt);
+  const dx = lowPass((point.x - previous.rawX) / dt, previous.dx, derivativeAlpha);
+  const dy = lowPass((point.y - previous.rawY) / dt, previous.dy, derivativeAlpha);
+  const speed = Math.hypot(dx, dy);
+  const positionAlpha = smoothingAlpha(2.5 + 0.015 * speed, dt);
+  const filtered = {
+    x: lowPass(point.x, previous.x, positionAlpha),
+    y: lowPass(point.y, previous.y, positionAlpha),
+    rawX: point.x, rawY: point.y, dx, dy, time
+  };
+  fakeCursorFilters[index] = filtered;
+  return { x: filtered.x, y: filtered.y };
+}
+
+function ensureInpaintCanvases(width, height) {
+  if (backgroundCanvas?.width === width && backgroundCanvas.height === height) return;
+  backgroundCanvas = new OffscreenCanvas(width, height);
+  validBackgroundCanvas = new OffscreenCanvas(width, height);
+  repairCanvas = new OffscreenCanvas(width, height);
+  inpaintMaskCanvas = new OffscreenCanvas(width, height);
+}
+
+function cursorRegions(boxes, width, height) {
+  return boxes.map(box => {
+    if (!box.point) {
+      const padding = Math.max(5, Math.min(width, height) * 0.008);
+      return {
+        x: box.x + box.w / 2,
+        y: box.y + box.h / 2,
+        radius: Math.max(box.w, box.h) / 2 + padding
+      };
+    }
+    // The hotspot of an arrow is near its top-left, while most of its pixels
+    // extend down and right. A slight offset also remains safe for symmetric
+    // cursors such as the I-beam and pointing hand.
+    const radius = Math.max(22, Math.min(64, Math.min(width, height) * 0.032));
+    return { x: box.x + radius * 0.22, y: box.y + radius * 0.22, radius };
+  });
+}
+
+function paintCursorMask(maskCtx, regions, feather = true) {
+  maskCtx.clearRect(0, 0, maskCtx.canvas.width, maskCtx.canvas.height);
+  for (const region of regions) {
+    if (feather) {
+      const inner = Math.max(0, region.radius - Math.max(3, region.radius * 0.18));
+      const gradient = maskCtx.createRadialGradient(region.x, region.y, inner, region.x, region.y, region.radius);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      maskCtx.fillStyle = gradient;
+    } else {
+      maskCtx.fillStyle = "white";
+    }
+    maskCtx.beginPath();
+    maskCtx.arc(region.x, region.y, region.radius, 0, Math.PI * 2);
+    maskCtx.fill();
+  }
+}
+
+function isSceneStableNearCursor(source, regions, width, height) {
+  if (!previousFrameCanvas || !regions.length || !source.getContext) return true;
+  const region = regions[0];
+  const radius = region.radius * 2;
+  const x = Math.max(0, Math.floor(region.x - radius));
+  const y = Math.max(0, Math.floor(region.y - radius));
+  const w = Math.min(width - x, Math.ceil(radius * 2));
+  const h = Math.min(height - y, Math.ceil(radius * 2));
+  if (w <= 0 || h <= 0) return true;
+  const current = source.getContext("2d").getImageData(x, y, w, h).data;
+  const previous = previousFrameCanvas.getContext("2d").getImageData(x, y, w, h).data;
+  let difference = 0;
+  let samples = 0;
+  for (let py = 0; py < h; py += 3) {
+    for (let px = 0; px < w; px += 3) {
+      const screenX = x + px;
+      const screenY = y + py;
+      const distance = Math.hypot(screenX - region.x, screenY - region.y);
+      if (distance < region.radius * 1.15 || distance > region.radius * 1.9) continue;
+      if (previousCursorRegions.some(old => Math.hypot(screenX - old.x, screenY - old.y) < old.radius)) continue;
+      const offset = (py * w + px) * 4;
+      difference += Math.abs(current[offset] - previous[offset]);
+      difference += Math.abs(current[offset + 1] - previous[offset + 1]);
+      difference += Math.abs(current[offset + 2] - previous[offset + 2]);
+      samples += 3;
+    }
+  }
+  return !samples || difference / samples < 10;
+}
+
+function rememberInpaintFrame(source, regions, width, height) {
+  if (!previousFrameCanvas || previousFrameCanvas.width !== width || previousFrameCanvas.height !== height) {
+    previousFrameCanvas = new OffscreenCanvas(width, height);
+  }
+  previousFrameCanvas.getContext("2d").drawImage(source, 0, 0, width, height);
+  previousCursorRegions = regions.map(region => ({ ...region }));
+}
+
+function drawInpainted(source, boxes, width, height, updateBackground) {
+  ensureInpaintCanvases(width, height);
+  const regions = cursorRegions(boxes, width, height);
+  const backgroundCtx = backgroundCanvas.getContext("2d");
+  const validCtx = validBackgroundCanvas.getContext("2d");
+  const maskCtx = inpaintMaskCanvas.getContext("2d");
+  const sceneStable = isSceneStableNearCursor(source, regions, width, height);
+
+  if (updateBackground) {
+    // Update every currently visible pixel except the cursor region. The
+    // validity canvas prevents an initially obscured pixel from being used as
+    // background until it has actually been seen.
+    const cleanArea = new Path2D();
+    cleanArea.rect(0, 0, width, height);
+    for (const region of regions) cleanArea.arc(region.x, region.y, region.radius, 0, Math.PI * 2);
+    backgroundCtx.save();
+    backgroundCtx.clip(cleanArea, "evenodd");
+    backgroundCtx.drawImage(source, 0, 0, width, height);
+    backgroundCtx.restore();
+    validCtx.save();
+    validCtx.clip(cleanArea, "evenodd");
+    validCtx.fillStyle = "white";
+    validCtx.fillRect(0, 0, width, height);
+    validCtx.restore();
+  }
+
+  ctx.drawImage(source, 0, 0, width, height);
+  if (!regions.length) {
+    if (updateBackground) rememberInpaintFrame(source, regions, width, height);
+    return;
+  }
+  paintCursorMask(maskCtx, regions);
+  const repairCtx = repairCanvas.getContext("2d");
+  repairCtx.clearRect(0, 0, width, height);
+  repairCtx.globalCompositeOperation = "source-over";
+  if (sceneStable) {
+    repairCtx.drawImage(backgroundCanvas, 0, 0);
+    repairCtx.globalCompositeOperation = "destination-in";
+    repairCtx.drawImage(inpaintMaskCanvas, 0, 0);
+    repairCtx.drawImage(validBackgroundCanvas, 0, 0);
+  }
+  if (previousFrameCanvas) {
+    // Prefer the immediately preceding frame wherever it did not contain the
+    // cursor. This keeps replacements fresh during fast motion and scrolling.
+    comparisonCanvas ||= new OffscreenCanvas(width, height);
+    if (comparisonCanvas.width !== width || comparisonCanvas.height !== height) {
+      comparisonCanvas = new OffscreenCanvas(width, height);
+    }
+    const comparisonCtx = comparisonCanvas.getContext("2d");
+    comparisonCtx.clearRect(0, 0, width, height);
+    comparisonCtx.globalCompositeOperation = "source-over";
+    comparisonCtx.drawImage(previousFrameCanvas, 0, 0);
+    paintCursorMask(maskCtx, previousCursorRegions, false);
+    comparisonCtx.globalCompositeOperation = "destination-out";
+    comparisonCtx.drawImage(inpaintMaskCanvas, 0, 0);
+    paintCursorMask(maskCtx, regions);
+    comparisonCtx.globalCompositeOperation = "destination-in";
+    comparisonCtx.drawImage(inpaintMaskCanvas, 0, 0);
+    comparisonCtx.globalCompositeOperation = "source-over";
+    repairCtx.globalCompositeOperation = "source-over";
+    repairCtx.drawImage(comparisonCanvas, 0, 0);
+  }
+  repairCtx.globalCompositeOperation = "source-over";
+  ctx.drawImage(repairCanvas, 0, 0);
+  if (updateBackground) rememberInpaintFrame(source, regions, width, height);
+}
+
+function draw(source, boxes, updateBackground = false, videoFrame = source === video,
+    frameTime = videoFrame ? video.currentTime : undefined) {
   const width = source.videoWidth || source.naturalWidth || source.width;
   const height = source.videoHeight || source.naturalHeight || source.height;
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
   }
-  ctx.drawImage(source, 0, 0, width, height);
-  if (source === video && traceToggle.checked) drawTrace(video.currentTime, width);
+  if (inpaintToggle.checked) drawInpainted(source, boxes, width, height, updateBackground);
+  else ctx.drawImage(source, 0, 0, width, height);
+  // Once the original cursor is gone, retain a small visual indication of the
+  // detected hotspot without bringing back the full detector annotation UI.
+  if (inpaintToggle.checked) {
+    if (videoFrame && traceToggle.checked) drawTrace(frameTime, width);
+    ctx.save();
+    ctx.strokeStyle = "#0a84ff";
+    ctx.lineWidth = 3;
+    const overlayTime = videoFrame && Number.isFinite(frameTime)
+      ? frameTime
+      : performance.now() / 1000;
+    for (const [index, box] of boxes.entries()) {
+      const point = smoothFakeCursor(tracePointFor(box), index, overlayTime, updateBackground);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 24, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    fakeCursorFilters.length = boxes.length;
+    ctx.restore();
+    return;
+  }
+  if (videoFrame && traceToggle.checked) drawTrace(video.currentTime, width);
   const line = Math.max(2, width / 600);
   ctx.font = `${Math.max(14, width / 65)}px ui-monospace, monospace`;
   ctx.lineWidth = line;
@@ -335,15 +573,24 @@ async function detect(source) {
   busy = true;
   const started = performance.now();
   const sourceTime = source === video ? video.currentTime : undefined;
+  // A video element continues advancing while inference is in flight. Keep an
+  // immutable copy so the returned hotspot, background update, and rendered
+  // pixels all refer to exactly the same frame.
+  const inferenceSource = source === video ? snapshotVideoFrame(source) : source;
   try {
     const temporal = MODELS[activeModelId]?.temporal;
-    const meta = temporal ? preprocessTemporal(source) : preprocess(source);
+    const meta = temporal ? preprocessTemporal(inferenceSource) : preprocess(inferenceSource);
     const outputs = await session.run({ [session.inputNames[0]]: meta.tensor });
     lastBoxes = temporal
       ? decodeTemporal(outputs, meta, Number(confidence.value) / 100)
       : decode(outputs[session.outputNames[0]], meta, Number(confidence.value) / 100);
     recordTrace(lastBoxes, sourceTime);
-    draw(source, lastBoxes);
+    if (source === video && Number.isFinite(sourceTime) && Number.isFinite(lastInpaintTime) &&
+        sourceTime < lastInpaintTime) {
+      resetInpainting();
+    }
+    draw(inferenceSource, lastBoxes, true, source === video, sourceTime);
+    if (source === video) lastInpaintTime = sourceTime;
     const elapsed = performance.now() - started;
     smoothedInferenceMs = smoothedInferenceMs == null ? elapsed : smoothedInferenceMs * 0.8 + elapsed * 0.2;
     resultLabel.textContent = lastBoxes.length ? `${lastBoxes.length} cursor${lastBoxes.length > 1 ? "s" : ""} detected` : "No cursor detected";
@@ -431,6 +678,7 @@ function openFile(file) {
   smoothedInferenceMs = undefined;
   temporalHistory = [];
   tracePoints = [];
+  resetInpainting();
   fpsLabel.textContent = "";
   emptyState.hidden = true;
   if (file.type.startsWith("video/")) {
@@ -474,8 +722,14 @@ confidence.addEventListener("change", () => {
 traceToggle.addEventListener("change", () => {
   if (hasVideoSource() && !currentImage) draw(video, lastBoxes);
 });
+inpaintToggle.addEventListener("change", () => {
+  resetInpainting();
+  if (currentImage) detect(currentImage);
+  else if (hasVideoSource()) detect(video);
+});
 modelPicker.addEventListener("change", () => {
   tracePoints = [];
+  resetInpainting();
   loadModel(modelPicker.value);
 });
 ["dragenter", "dragover"].forEach(type => dropZone.addEventListener(type, event => {
@@ -498,7 +752,9 @@ dropZone.addEventListener("keydown", event => {
 document.querySelector("#sampleButton").addEventListener("click", () => {
   stopScreenShare({ updateResult: false });
   stopVideo();
+  temporalHistory = [];
   tracePoints = [];
+  resetInpainting();
   videoControls.hidden = true;
   const sample = new OffscreenCanvas(1280, 720);
   const c = sample.getContext("2d");
@@ -543,6 +799,7 @@ shareScreenButton.addEventListener("click", async () => {
     currentImage = null;
     temporalHistory = [];
     tracePoints = [];
+    resetInpainting();
     lastBoxes = [];
     smoothedInferenceMs = undefined;
     videoControls.hidden = true;
@@ -602,6 +859,7 @@ stepForward.addEventListener("click", () => { stopVideo(); seekTo(video.currentT
 playbackRate.addEventListener("change", () => { video.playbackRate = Number(playbackRate.value); });
 video.addEventListener("ended", updateTransport);
 video.addEventListener("seeked", () => {
+  resetInpainting();
   updateTransport();
   detect(video);
 });
