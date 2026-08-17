@@ -15,7 +15,7 @@ h1 { margin: 0; font-size: clamp(44px, 6vw, 76px); font-weight: 700; line-height
 .status span { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #ff9f0a; }
 .status.ready span { background: #34c759; }
 .status.error { color: #ff3b30; }
-.controls { display: grid; grid-template-columns: minmax(140px, auto) minmax(240px, 1fr) auto auto; align-items: center; gap: 16px; padding: 16px; border: 1px solid #d2d2d7; background: rgba(255,255,255,.9); border-radius: 20px 20px 0 0; box-shadow: 0 8px 28px rgba(0,0,0,.06); }
+.controls { display: grid; grid-template-columns: minmax(140px, auto) minmax(240px, 1fr) auto auto auto; align-items: center; gap: 16px; padding: 16px; border: 1px solid #d2d2d7; background: rgba(255,255,255,.9); border-radius: 20px 20px 0 0; box-shadow: 0 8px 28px rgba(0,0,0,.06); }
 .sample-actions { display: flex; gap: 8px; }
 .sample-actions button { padding-inline: 14px; white-space: nowrap; }
 .sample-actions .share-button { background: #1d1d1f; }
@@ -26,7 +26,7 @@ h1 { margin: 0; font-size: clamp(44px, 6vw, 76px); font-weight: 700; line-height
 .model-picker select, .speed-label select { min-width: 0; width: 100%; color: #1d1d1f; background: #fff; border: 1px solid #d2d2d7; border-radius: 10px; padding: 10px; font: inherit; }
 .controls > label:not(.upload) { display: grid; grid-template-columns: 1fr auto; gap: 7px; color: #6e6e73; font-size: 13px; }
 .controls > label.model-picker { display: flex; flex-direction: column; align-items: stretch; }
-.controls > label.trace-toggle { display: grid; grid-template-columns: auto 42px; align-items: center; gap: 9px; white-space: nowrap; cursor: pointer; }
+.controls > label.trace-toggle { display: grid; grid-template-columns: auto 42px; align-items: center; justify-self: start; gap: 9px; white-space: nowrap; cursor: pointer; }
 .trace-toggle input { position: absolute; opacity: 0; pointer-events: none; }
 .switch { position: relative; width: 42px; height: 24px; border-radius: 999px; background: #d2d2d7; transition: background .2s ease; }
 .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.22); transition: transform .2s ease; }
